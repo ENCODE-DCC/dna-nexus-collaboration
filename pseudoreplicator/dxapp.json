@@ -1,0 +1,29 @@
+{
+  "name": "pseudoreplicator",
+  "title": "Pseudoreplicator",
+  "summary": "pseudoreplicator",
+  "dxapi": "1.0.0",
+  "version": "0.0.1",
+  "categories": [],
+  "inputSpec": [
+    {
+      "name": "input_bam",
+      "class": "file",
+      "optional": false
+    }
+  ],
+  "outputSpec": [
+    {
+      "name": "pseudoreplicate_bam1",
+      "class": "file"
+    },
+    {
+      "name": "pseudoreplicate_bam2",
+      "class": "file"
+    }
+  ],
+  "runSpec": {
+    "interpreter": "bash",
+    "file": "src/pseudoreplicator.sh"
+  }
+}
