@@ -101,7 +101,12 @@
   ],
   "runSpec": {
     "interpreter": "python2.7",
-    "file": "src/idr.py"
+    "file": "src/idr.py",
+    "systemRequirements": {
+      "main": {
+        "instanceType": "dx_c3.xlarge"
+      }
+    }
   },
   "authorizedUsers": []
 }
