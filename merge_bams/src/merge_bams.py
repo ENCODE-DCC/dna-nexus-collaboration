@@ -17,29 +17,22 @@ import multiprocessing
 
 import dxpy
 
-def download_and_gunzip_file(input_file, skip_decompress=False):
+def download_and_gunzip_file(input_file):
     input_file = dxpy.DXFile(input_file)
     input_filename = input_file.describe()['name']
     ofn = input_filename
 
-    cmd = 'dx download ' + input_file.get_id() + ' -o '
-    if input_filename.endswith('.tar.gz') and not skip_decompress:
-        cmd += '- | tar -zxvf - > '
-        ofn = ofn.replace('.tar.gz', '')
-    elif os.path.splitext(input_filename)[-1] == '.gz':
-        cmd += '- | gunzip > '
-        ofn = os.path.splitext(ofn)[0]
-    cmd += ofn
+    cmd = 'dx download ' + input_file.get_id() + ' -o ' + ofn
     print cmd
     subprocess.check_call(cmd, shell=True)
 
     return ofn
 
-def download_dx_files(dx_files, skip_decompress=False):
+def download_dx_files(dx_files):
     pool = multiprocessing.Pool()
     results = []
     for dx_file in dx_files:
-        results += [pool.apply_async(download_and_gunzip_file, args=(dx_file,))]
+        results += [pool.apply_async(download_and_gunzip_file, args=(dx_file, ))]
     pool.close()
     pool.join()
 
@@ -57,14 +50,14 @@ def main(input_bams):
     if len(ofn) > 0:
         ofn += '_'
     ofn += 'merged.bam'
-    cmd = '/sambamba merge -t {0} /dev/stdout '.format(multiprocessing.cpu_count())
+    cmd = '/samtools merge - '
     cmd += ' '.join(input_bams) + ' | dx upload - -o {0} --brief'.format(ofn)
     print cmd
     dxid = subprocess.check_output(cmd, shell=True)
     dxid = dxid.strip()
 
     output = {}
-    output['output_bam'] = dxpy.dxlink(dxid)
+    output['merged_bam'] = dxpy.dxlink(dxid)
 
     return output
 
