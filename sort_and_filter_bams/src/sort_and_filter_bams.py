@@ -62,11 +62,18 @@ def sort_bam(**job_inputs):
 def main(input_bams, quality_filter=True, remove_duplicates=True):
     output_bams = []
     metrics_files = []
-    for input_bam in input_bams:
-        sort_inputs = {'input_bam': input_bam, 'quality_filter': quality_filter, 'remove_duplicates': remove_duplicates}
-        sort_job = dxpy.new_dxjob(sort_inputs, 'sort_bam')
-        output_bams += [sort_job.get_output_ref('bam_file')]
-        metrics_files += [sort_job.get_output_ref('metrics_file')]
+
+    if len(input_bams) > 1:
+        for input_bam in input_bams:
+            sort_inputs = {'input_bam': input_bam, 'quality_filter': quality_filter, 'remove_duplicates': remove_duplicates}
+            sort_job = dxpy.new_dxjob(sort_inputs, 'sort_bam')
+            output_bams += [sort_job.get_output_ref('bam_file')]
+            metrics_files += [sort_job.get_output_ref('metrics_file')]
+    else:
+        sort_inputs = {'input_bam': input_bams[0], 'quality_filter': quality_filter, 'remove_duplicates': remove_duplicates}
+        sort_output = sort_bam(sort_inputs)
+        output_bams = [sort_output['bam_file']]
+        metrics_files = [sort_output['metrics_file']]
 
     output = {'output_bams': output_bams,
               'dedup_metrics_files': metrics_files}
