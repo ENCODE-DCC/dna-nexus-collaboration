@@ -48,6 +48,7 @@
   "runSpec": {
     "interpreter": "python2.7",
     "file": "src/sort_and_filter_bams.py",
+    "execDepends": [ {"name": "openjdk-7-jre-headless"}],
     "systemRequirements": {
       "main": {
         "instanceType": "mem1_ssd1_x4"

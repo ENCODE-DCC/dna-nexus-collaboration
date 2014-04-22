@@ -14,53 +14,62 @@
 import os
 import subprocess
 import multiprocessing
+import re
 
 import dxpy
 
-def sort_bam(input_bam, quality_filter, remove_duplicates):
-    input_bam = dxpy.DXFile(input_bam)
+def get_java_cmd():
+    # Calc amount of memory available for gatk and Picard.
+    total_mem = re.findall('^MemTotal:[\s]*([0-9]*) kB',
+                           open('/proc/meminfo').read())
+    if(len(total_mem) != 1):
+        raise dxpy.DXError('Problem reading system memory from /proc/meminfo')
+    mem = int(0.9 * int(total_mem[0]) / 1024.0)
+    java_cmd = 'java -Xmx{mem}m '.format(mem=mem)
+
+    return java_cmd
+
+@dxpy.entry_point('sort_bam')
+def sort_bam(**job_inputs):
+    input_bam = dxpy.DXFile(job_inputs['input_bam'])
     fn = input_bam.describe()['name']
-    sorted_ofn = os.path.splitext(fn)[0] + '_sorted.bam'
     dxpy.download_dxfile(input_bam.get_id(), fn)
-    cmd = '/sambamba sort -o /dev/stdout {0} '.format(fn)
-    if quality_filter:
-        cmd += '| /sambamba view -F "(mapping_quality > 1) and not unmapped" -o /dev/stdout /dev/stdin '
+
+    sorted_ofn = os.path.splitext(fn)[0] + '_sorted.bam'
+    cmd = '/sambamba sort -t {0} -o /dev/stdout {1} '.format(multiprocessing.cpu_count()-1, fn)
+    if job_inputs['quality_filter']:
+        cmd += '| /sambamba view -f bam -F "(mapping_quality > 1) and not unmapped" -o /dev/stdout /dev/stdin '
     cmd += '> ' + sorted_ofn
     print cmd
     subprocess.check_call(cmd, shell=True)
 
-    if remove_duplicates:
-        deduped_ofn = os.path.splitext(sorted_ofn)['0'] + '_deduped.bam'
-        md_metrics_ofn = os.path.splitext(sorted_ofn)['0'] + '_deduped_metrics.txt'
-        cmd = 'java -jar /MarkDuplicates.jar I={0} O={1} METRICS_FILE={2} VALIDATION_STRINGENCY=LENIENT REMOVE_DUPLICATES=true '.format(sorted_ofn, deduped_ofn, md_metrics_ofn)
+    if job_inputs['remove_duplicates']:
+        deduped_ofn = os.path.splitext(sorted_ofn)[0] + '_deduped.bam'
+        md_metrics_ofn = os.path.splitext(sorted_ofn)[0] + '_deduped_metrics.txt'
+        cmd = get_java_cmd()
+        cmd += ' -jar /MarkDuplicates.jar I={0} O={1} METRICS_FILE={2} ASSUME_SORTED=true VALIDATION_STRINGENCY=LENIENT REMOVE_DUPLICATES=true '.format(sorted_ofn, deduped_ofn, md_metrics_ofn)
         print cmd
         subprocess.check_call(cmd, shell=True)
-        bam_file = dxpy.upload_local_file(deduped_ofn)
-        metrics_file = dxpy.upload_local_file(md_metrics_ofn)
+        bam_file = dxpy.dxlink(dxpy.upload_local_file(deduped_ofn).get_id())
+        metrics_file = dxpy.dxlink(dxpy.upload_local_file(md_metrics_ofn).get_id())
     else:
-        bam_file = dxpy.upload_local_file(sorted_ofn)
+        bam_file = dxpy.dxlink(dxpy.upload_local_file(sorted_ofn).get_id())
         metrics_file = None
 
-
-    return (dxpy.dxlink(bam_file.get_id()), dxpy.dxlink(metrics_file.get_id()))
+    return {'bam_file': bam_file, 'metrics_file': metrics_file}
 
 @dxpy.entry_point('main')
 def main(input_bams, quality_filter=True, remove_duplicates=True):
-    pool = multiprocessing.Pool()
     output_bams = []
+    metrics_files = []
     for input_bam in input_bams:
-        output_bams += [pool.apply_async(sort_bam, (input_bam, quality_filter, remove_duplicates))]
+        sort_inputs = {'input_bam': input_bam, 'quality_filter': quality_filter, 'remove_duplicates': remove_duplicates}
+        sort_job = dxpy.new_dxjob(sort_inputs, 'sort_bam')
+        output_bams += [sort_job.get_output_ref('bam_file')]
+        metrics_files += [sort_job.get_output_ref('metrics_file')]
 
-    pool.close()
-    pool.join()
-
-    outputs_bams = [b.get(timeout=10) for b in output_bams]
-
-    (bams, metrics_files) = zip(*outputs_bams)
-
-    output = {'output_bams': list(bams)}
-    if metrics_files[0] is not None:
-        output['dedup_metrics_files'] = list(metrics_files)
+    output = {'output_bams': output_bams,
+              'dedup_metrics_files': metrics_files}
 
     return output
 
