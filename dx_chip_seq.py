@@ -31,6 +31,11 @@ def get_args():
                     help='DNAnexus project name',
                     required=True)
 
+    ap.add_argument('-s', '--sort_filter_and_remove_dups',
+                    help='Sort, filter, and remove duplicates for input bam files',
+                    action='store_true',
+                    required=False)
+
     ap.add_argument('-d', '--duplicates_removed',
                     help='Flag indicating that duplicates have been removed',
                     action='store_true',
@@ -73,12 +78,28 @@ def get_project(project_name):
 
     return project
 
-def populate_workflow(wf, replicates, controls, project_name, duplicates_removed):
+def populate_workflow(wf, replicates, controls, project_name, sort_filter_and_remove_dups, duplicates_removed):
     '''This function will populate the workflow for the ChIP-Seq Pipeline.'''
     if duplicates_removed:
-        spp_app_name = 'spp_nodups'
+        #FIXME Should be spp_nodups, but I don't have this app yet.
+        spp_app_name = 'spp'
     else:
         spp_app_name = 'spp'
+
+    if sort_filter_and_remove_dups:
+        sorted_replicates = []
+        for replicate in replicates:
+            sort_replicates_input = {'input_bam': replicate}
+            stage_id = wf.add_stage(find_applet_by_name('sort_and_filter_bams'), stage_input=sort_replicates_input, folder=REPLICATES_FOLDER)
+            sorted_replicates += [dxpy.dxlink({'stage': stage_id, 'outputField': 'output_bam'})]
+        replicates = sorted_replicates
+
+        sorted_controls = []
+        for control in controls:
+            sort_controls_input = {'input_bam': control}
+            stage_id = wf.add_stage(find_applet_by_name('sort_and_filter_bams'), stage_input=sort_controls_input, folder=CONTROLS_FOLDER)
+            sorted_controls += [dxpy.dxlink({'stage': stage_id, 'outputField': 'output_bam'})]
+        controls = sorted_controls
 
     if len(controls) > 1:
         control_merge_input = {'input_bams': controls}
@@ -161,6 +182,8 @@ def copy_files(fids, project, folder):
 
 if __name__ == '__main__':
     args = get_args()
+    if args.sort_filter_and_remove_dups:
+        args.duplicates_removed = True
 
     project = get_project(args.project_name)
     print 'Project: ' + project.describe()['name']
@@ -174,5 +197,5 @@ if __name__ == '__main__':
                              name='ENCODE ChIP-Seq 2.0',
                              description='The ENCODE ChIP-Seq Pipeline 2.0',
                              project=project.get_id())
-    populate_workflow(wf, replicates, controls, project.describe()['name'], args.duplicates_removed)
+    populate_workflow(wf, replicates, controls, project.describe()['name'], args.sort_filter_and_remove_dups, args.duplicates_removed)
 
