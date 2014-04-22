@@ -9,9 +9,9 @@
   ],
   "inputSpec": [
     {
-      "name": "input_bams",
-      "label": "Input bam files",
-      "class": "array:file",
+      "name": "input_bam",
+      "label": "Input bam file",
+      "class": "file",
       "optional": false,
       "patterns": ["*.bam"]
     },
@@ -32,15 +32,15 @@
   ],
   "outputSpec": [
     {
-      "name": "output_bams",
+      "name": "output_bam",
       "label": "Output bam file",
-      "class": "array:file",
+      "class": "file",
       "patterns": ["*.bam"]
     },
     {
-      "name": "dedup_metrics_files",
-      "label": "The metrics files from MarkDuplicates",
-      "class": "array:file",
+      "name": "dedup_metrics_file",
+      "label": "The metrics file from MarkDuplicates",
+      "class": "file",
       "patterns": ["*.txt"],
       "optional": true
     }

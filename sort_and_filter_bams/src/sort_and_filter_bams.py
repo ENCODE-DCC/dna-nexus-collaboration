@@ -29,7 +29,6 @@ def get_java_cmd():
 
     return java_cmd
 
-@dxpy.entry_point('sort_bam')
 def sort_bam(**job_inputs):
     input_bam = dxpy.DXFile(job_inputs['input_bam'])
     fn = input_bam.describe()['name']
@@ -59,24 +58,12 @@ def sort_bam(**job_inputs):
     return {'bam_file': bam_file, 'metrics_file': metrics_file}
 
 @dxpy.entry_point('main')
-def main(input_bams, quality_filter=True, remove_duplicates=True):
-    output_bams = []
-    metrics_files = []
+def main(input_bam, quality_filter=True, remove_duplicates=True):
+    sort_inputs = {'input_bam': input_bam, 'quality_filter': quality_filter, 'remove_duplicates': remove_duplicates}
+    sort_output = sort_bam(sort_inputs)
 
-    if len(input_bams) > 1:
-        for input_bam in input_bams:
-            sort_inputs = {'input_bam': input_bam, 'quality_filter': quality_filter, 'remove_duplicates': remove_duplicates}
-            sort_job = dxpy.new_dxjob(sort_inputs, 'sort_bam')
-            output_bams += [sort_job.get_output_ref('bam_file')]
-            metrics_files += [sort_job.get_output_ref('metrics_file')]
-    else:
-        sort_inputs = {'input_bam': input_bams[0], 'quality_filter': quality_filter, 'remove_duplicates': remove_duplicates}
-        sort_output = sort_bam(sort_inputs)
-        output_bams = [sort_output['bam_file']]
-        metrics_files = [sort_output['metrics_file']]
-
-    output = {'output_bams': output_bams,
-              'dedup_metrics_files': metrics_files}
+    output = {'output_bams': sort_output['bam_file'],
+              'dedup_metrics_files': sort_output['metrics_file']}
 
     return output
 
