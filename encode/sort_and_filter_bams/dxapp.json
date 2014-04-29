@@ -1,0 +1,59 @@
+{
+  "name": "sort_and_filter_bams",
+  "title": "Sort and Filter Bams",
+  "summary": "Sorts and filters the input bams",
+  "dxapi": "1.0.0",
+  "version": "0.0.1",
+  "categories": [
+    "Mappings Manipulation"
+  ],
+  "inputSpec": [
+    {
+      "name": "input_bam",
+      "label": "Input bam file",
+      "class": "file",
+      "optional": false,
+      "patterns": ["*.bam"]
+    },
+    {
+      "name": "quality_filter",
+      "label": "Filter bam file for mapped and q>1",
+      "class": "boolean",
+      "optional": true,
+      "default": true
+    },
+    {
+      "name": "remove_duplicates",
+      "label": "Remove duplicates from bam file",
+      "class": "boolean",
+      "optional": true,
+      "default": true
+    }
+  ],
+  "outputSpec": [
+    {
+      "name": "output_bam",
+      "label": "Output bam file",
+      "class": "file",
+      "patterns": ["*.bam"]
+    },
+    {
+      "name": "dedup_metrics_file",
+      "label": "The metrics file from MarkDuplicates",
+      "class": "file",
+      "patterns": ["*.txt"],
+      "optional": true
+    }
+  ],
+  "runSpec": {
+    "interpreter": "python2.7",
+    "file": "src/sort_and_filter_bams.py",
+    "execDepends": [ {"name": "openjdk-7-jre-headless"}],
+    "systemRequirements": {
+      "main": {
+        "instanceType": "mem1_ssd1_x4"
+      }
+    }
+  },
+  "authorizedUsers": []
+}
