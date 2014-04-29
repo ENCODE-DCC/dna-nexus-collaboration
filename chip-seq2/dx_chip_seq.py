@@ -20,12 +20,12 @@ def get_args():
     ap.add_argument('-r', '--replicates',
                     help='Replicate files.',
                     nargs='+',
-                    required=True)
+                    required=False)
 
     ap.add_argument('-c', '--controls',
                     help='Control files.',
                     nargs='+',
-                    required=True)
+                    required=False)
 
     ap.add_argument('-p', '--project_name',
                     help='DNAnexus project name',
@@ -81,8 +81,7 @@ def get_project(project_name):
 def populate_workflow(wf, replicates, controls, project_name, sort_filter_and_remove_dups, duplicates_removed):
     '''This function will populate the workflow for the ChIP-Seq Pipeline.'''
     if duplicates_removed:
-        #FIXME Should be spp_nodups, but I don't have this app yet.
-        spp_app_name = 'spp'
+        spp_app_name = 'spp_nodups'
     else:
         spp_app_name = 'spp'
 
@@ -180,6 +179,11 @@ def copy_files(fids, project, folder):
 
     return new_fids
 
+def project_has_controls_and_replicates_folders(project):
+    folders = project.list_folder()['folders']
+
+    return (REPLICATES_FOLDER in folders) and (CONTROLS_FOLDER in folders)
+
 if __name__ == '__main__':
     args = get_args()
     if args.sort_filter_and_remove_dups:
@@ -187,10 +191,25 @@ if __name__ == '__main__':
 
     project = get_project(args.project_name)
     print 'Project: ' + project.describe()['name']
-    project.new_folder(REPLICATES_FOLDER, True)
-    project.new_folder(CONTROLS_FOLDER, True)
-    replicates = copy_files(args.replicates, project, REPLICATES_FOLDER)
-    controls = copy_files(args.controls, project, CONTROLS_FOLDER)
+    if project_has_controls_and_replicates_folders(project):
+        replicates = dxpy.find_data_objects(classname='file', name='*.bam',
+                                            name_mode='glob', project=project.get_id(),
+                                            folder=REPLICATES_FOLDER, return_handler=False)
+        replicates = [dxpy.dxlink(r) for r in replicates]
+        controls = dxpy.find_data_objects(classname='file', name='*.bam',
+                                          name_mode='glob', project=project.get_id(),
+                                          folder=CONTROLS_FOLDER, return_handler=False)
+        controls = [dxpy.dxlink(c) for c in controls]
+    else:
+        if (len(args.replicates) < 1) or (len(args.controls) < 1):
+            sys.exit('Need to have at least 1 replicate file and 1 control file.')
+        project.new_folder(REPLICATES_FOLDER, True)
+        project.new_folder(CONTROLS_FOLDER, True)
+        replicates = copy_files(args.replicates, project, REPLICATES_FOLDER)
+        controls = copy_files(args.controls, project, CONTROLS_FOLDER)
+
+    if (len(replicates) < 1) or (len(controls) < 1):
+        sys.exit('Need to have at least 1 replicate file and 1 control file.')
 
     # Now create a new workflow
     wf = dxpy.new_dxworkflow(title='dx_chip_seq',
