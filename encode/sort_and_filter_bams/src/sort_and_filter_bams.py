@@ -29,7 +29,7 @@ def get_java_cmd():
 
     return java_cmd
 
-def sort_bam(**job_inputs):
+def sort_bam(job_inputs):
     input_bam = dxpy.DXFile(job_inputs['input_bam'])
     fn = input_bam.describe()['name']
     dxpy.download_dxfile(input_bam.get_id(), fn)
@@ -62,8 +62,8 @@ def main(input_bam, quality_filter=True, remove_duplicates=True):
     sort_inputs = {'input_bam': input_bam, 'quality_filter': quality_filter, 'remove_duplicates': remove_duplicates}
     sort_output = sort_bam(sort_inputs)
 
-    output = {'output_bams': sort_output['bam_file'],
-              'dedup_metrics_files': sort_output['metrics_file']}
+    output = {'output_bam': sort_output['bam_file'],
+              'dedup_metrics_file': sort_output['metrics_file']}
 
     return output
 
