@@ -16,7 +16,7 @@
 # to modify this file.
 
 main() {
-    
+    set -e -x 
     #apt-cache showpkg r-base
     sudo apt-get -f -y --force-yes install r-base-core=2.15.3-1precise0precise1
 
@@ -61,8 +61,8 @@ main() {
     
     ls
     
-    pdf="${input_name%.bam}.pdf"
-    rdata="${input_name%.bam}.Rdata"
+    pdf="${input_name%.*}.pdf"
+    rdata="${input_name%.*}.Rdata"
     #peaks=`ls "${input_name%.bam}*.gz"`
     peaks=`ls *.regionPeak.gz`
 
