@@ -1,0 +1,112 @@
+{
+  "name": "idr",
+  "title": "IDR Analysis",
+  "summary": "Performs Irreproducible Discovery Rate Analysis",
+  "dxapi": "1.0.0",
+  "version": "0.0.1",
+  "categories": [
+    "Statistics"
+  ],
+  "inputSpec": [
+    {
+      "name": "replicate_peaks_files",
+      "label": "The peaks files of each replicate.",
+      "class": "array:file",
+      "optional": false,
+      "patterns": ["*.regionPeak.gz"]
+    },
+    {
+      "name": "replicate_peaks_threshold",
+      "label": "The threshold to use when counting peaks from replicate samples.",
+      "class": "float",
+      "optional": false
+    },
+    {
+      "name": "pooled_replicate_peaks_file",
+      "label": "The peaks files of the pooled replicates.",
+      "class": "file",
+      "optional": false,
+      "patterns": ["*.regionPeak.gz"]
+    },
+    {
+      "name": "pseudo_replicate_peaks_files",
+      "label": "The peaks files of the pseudo-replicates.",
+      "class": "array:file",
+      "optional": false,
+      "patterns": ["*.regionPeak.gz"]
+    },
+    {
+      "name": "pseudo_replicate_peaks_threshold",
+      "label": "The threshold to use when counting peaks from pseudo-replicate samples.",
+      "class": "float",
+      "optional": false
+    },
+    {
+      "name": "pooled_pseudo_replicate_peaks_file",
+      "label": "The peaks file of the pooled-replicates.",
+      "class": "array:file",
+      "optional": false,
+      "patterns": ["*.regionPeak.gz"]
+    },
+    {
+      "name": "pooled_pseudo_replicate_peaks_threshold",
+      "label": "The threshold to use when counting peaks from pooled pseudo-replicate samples.",
+      "class": "float",
+      "optional": false
+    },
+    {
+      "name": "output_prefix",
+      "label": "The prefix to use for output files.",
+      "class": "string",
+      "optional": false
+    },
+    {
+      "name": "ranking_measure",
+      "label": "Ranking measure",
+      "class": "string",
+      "optional": false,
+      "choices": ["signal.value", "p.value", "q.value"]
+    },
+    {
+      "name": "genome_table_filename",
+      "label": "Genome table filename",
+      "class": "string",
+      "optional": false,
+      "choices": ["genome_table.human.hg18.txt", "genome_table.human.hg19.txt", "genome_table.mm9.txt", "genome_table.worm.ws220.txt"]
+    }
+  ],
+  "outputSpec": [
+    {
+      "name": "conservative_peak_calls",
+      "class": "file",
+      "patterns": ["*.regionPeak.gz"]
+    },
+    {
+      "name": "optimal_peak_calls",
+      "class": "file",
+      "patterns": ["*.regionPeak.gz"]
+    },
+    {
+      "name": "num_peaks_each_rep",
+      "class": "array:int"
+    },
+    {
+      "name": "num_peaks_each_pseudo_rep",
+      "class": "array:int"
+    },
+    {
+      "name": "num_peaks_pooled_pseudo_rep",
+      "class": "int"
+    }
+  ],
+  "runSpec": {
+    "interpreter": "python2.7",
+    "file": "src/idr.py",
+    "systemRequirements": {
+      "main": {
+        "instanceType": "dx_c3.xlarge"
+      }
+    }
+  },
+  "authorizedUsers": []
+}
