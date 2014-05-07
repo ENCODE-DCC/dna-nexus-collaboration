@@ -1,0 +1,35 @@
+{
+  "name": "downloader",
+  "title": "downloader",
+  "summary": "downloader",
+  "dxapi": "1.0.0",
+  "version": "0.0.1",
+  "categories": [],
+  "inputSpec": [
+    {
+      "name": "workers",
+      "class": "int",
+      "optional": false,
+      "default": 1
+    },
+    {
+      "name": "max_files_per_worker",
+      "class": "int",
+      "optional": true
+    }
+  ],
+  "outputSpec": [],
+  "runSpec": {
+    "interpreter": "python2.7",
+    "file": "src/downloader.py",
+    "execDepends": [{"name": "dstat"},
+                    {"name": "aria2"}]
+  },
+  "access": {
+    "project": "CONTRIBUTE",
+    "network": [
+      "*"
+    ]
+  },
+  "authorizedUsers": []
+}
