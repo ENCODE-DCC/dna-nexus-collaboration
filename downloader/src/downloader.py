@@ -153,7 +153,7 @@ def process(workers, max_files_per_worker, whoami, threads_per_worker, smallest)
 
         # take a subset for this worker
         files = [files[i] for i in xrange(len(files)) if i%workers == whoami]
-        if len(files) > max_files_per_worker:
+        if max_files_per_worker is not None and len(files) > max_files_per_worker:
             del files[max_files_per_worker:]
 
         print "will process", len(files), "files totaling", sum([f.size for f in files]), "bytes"
