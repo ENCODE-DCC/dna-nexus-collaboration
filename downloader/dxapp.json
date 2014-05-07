@@ -19,7 +19,7 @@
     },
     {
       "name": "smallest",
-      "class": "int",
+      "class": "boolean",
       "optional": true,
       "default": false
     }

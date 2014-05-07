@@ -60,31 +60,38 @@ def postprocess(process_outputs):
 
 
 def transfer_file(f):
+    print f.path, "transfer"
+
     dn, fn = os.path.split(f.path)
     dn = "/" + dn
     urls = [base + f.path for base in mirror_urls]
 
     # download
-    subprocess.check_call(["aria2c","-x","16", "-s","64","--check-certificate=false","-o",f.md5] + urls)
+    subprocess.check_call(["aria2c","-x","16", "-s","64","--check-certificate=false","-o",f.md5,"-q"] + urls)
     
-    # verify integrity
-    md5 = subprocess.Popen(["md5sum",f.md5],stdout=subprocess.PIPE).communicate()[0]
-    if md5 != f.md5:
-        raise Error("expected MD5 " + f.md5 + " got " + md5)
-    
-    # upload to project
-    subprocess.check_call(["/ua","-p",dxpy.PROJECT_CONTEXT_ID,"-f",dn,"-n",fn,"-r","8",
-                           "--do-not-compress","--do-not-resume",fn])
-    
-    # tag file with md5
-    dxfiles = dxpy.search.find_data_objects(project=dxpy.PROJECT_CONTEXT_ID,classname="file",
-                                            folder=dn,name=fn,return_handler=True)
-    if len(dxfiles) != 1:
-        raise Error("could not uniquely locate file just uploaded")
-    dxfiles[0].set_properties({"md5": f.md5})
-
-    # delete scratch copy
-    os.remove(f.md5)
+    try:
+        # verify integrity
+        md5 = subprocess.Popen(["md5sum",f.md5],stdout=subprocess.PIPE).communicate()[0].split()[0]
+        if md5 != f.md5:
+            raise Exception("expected MD5 " + f.md5 + " got " + md5)
+        print f.path, "verified", md5, f.md5
+        
+        # upload to project
+        subprocess.check_call(["/ua","-p",dxpy.PROJECT_CONTEXT_ID,"-f",dn,"-n",fn,"-r","8",
+                               "--do-not-compress","--do-not-resume",f.md5])
+        
+        # tag file with md5
+        dxfiles = list(dxpy.search.find_data_objects(project=dxpy.PROJECT_CONTEXT_ID,classname="file",
+                                                     folder=dn,name=fn,return_handler=True))
+        if len(dxfiles) != 1:
+            raise Exception("could not uniquely locate file just uploaded")
+        dxfiles[0].set_properties({"md5": f.md5})
+    finally:
+        try:
+            # delete scratch copy
+            os.remove(f.md5)
+        except:
+            pass
 
 def process_file(f):
     print f.path, "begin"
@@ -92,26 +99,26 @@ def process_file(f):
     dn = "/" + dn
 
     # check if a file object with this path already exists in the project
-    existing_dxfiles = dxpy.search.find_data_objects(project=dxpy.PROJECT_CONTEXT_ID,classname="file",
-                                                     folder=dn,name=fn,return_handler=True)
+    existing_dxfiles = list(dxpy.search.find_data_objects(project=dxpy.PROJECT_CONTEXT_ID,classname="file",
+                                                          folder=dn,name=fn,return_handler=True))
 
     if len(existing_dxfiles) > 1:
-        raise Error(f.path + " found multiple existing file objects! manually remove them and try again")
+        raise Exception(f.path + " found multiple existing file objects! manually remove them and try again")
     elif len(existing_dxfiles) == 1:
         existing_dxfile = existing_dxfiles[0]
-
         if existing_dxfile.state == "open":
             print f.path, " removing existing open file object"
             existing_dxfile.remove()
         else:
             existing_props = existing_dxfile.get_properties()
             if "md5" not in existing_props or existing_props["md5"] != f.md5:
-                raise Error(f.path + " MD5 mismatch with existing file object! manually remove and try again")
-            print f.path, " skip"
+                raise Exception(f.path + " MD5 mismatch with existing file object! manually remove and try again")
+            print f.path, "skip", f.md5
             return 0
 
+    # perform transfer, with retry logic
     max_tries=8
-    for n in xrange(max_tries)
+    for n in xrange(max_tries):
         try:
             transfer_file(f)
             break
@@ -119,43 +126,46 @@ def process_file(f):
             print f.path, sys.exc_info()[0]
             if n == max_tries-1:
                 raise
-            print f.path, " retry"
+            print f.path, "retry"
 
-    print f.path, " complete"
+    print f.path, "complete"
     return 1
 
 @dxpy.entry_point("process")
 def process(workers, max_files_per_worker, whoami, smallest):
-    # TODO spawn dstat
-    subprocess.check_call("gunzip /ua.gz; chmod +x /ua",shell=True)
-    files = load_file_list()
+    dstat = subprocess.Popen(['dstat','-cmdn','10'])
+    try:
+        subprocess.check_call("gunzip /ua.gz; chmod +x /ua",shell=True)
+        files = load_file_list()
 
-    # sort the files by MD5
-    if not smallest:
-        files.sort(key=lambda f: f.md5)
-    else:
-        # for testing: start with the smallest files
-        files.sort(key=lambda f: f.size)
+        # sort the files by MD5
+        if not smallest:
+            files.sort(key=lambda f: f.md5)
+        else:
+            # for rapid testing: start with the smallest files
+            files.sort(key=lambda f: f.size)
 
-    # take only those for this worker
-    files = [files[i] for i in xrange(len(files)) if i%workers == whoami]
+        # take only those for this worker
+        files = [files[i] for i in xrange(len(files)) if i%workers == whoami]
 
-    # apply max_files_per_worker
-    if len(files) > max_files_per_worker:
-        del files[max_files_per_worker:]
+        # apply max_files_per_worker
+        if len(files) > max_files_per_worker:
+            del files[max_files_per_worker:]
 
-    print "will process", len(files), "files"
+        print "will process", len(files), "files"
 
-    # TODO use multiprocessing.dummy.Pool to do the following
-    #      count skipped & transferred
+        # TODO use multiprocessing.dummy.Pool to do the following
+        #      count skipped & transferred
 
-    for f in files:
-       process_file(f)
+        for f in files:
+           process_file(f)
+    finally:
+        dstat.kill()
 
     return { "output": "placeholder value" }
 
 @dxpy.entry_point("main")
-def main(workers, max_files_per_worker=None, smallest=Falso):
+def main(workers, max_files_per_worker=None, smallest=False):
     mkdirs()
 
     subjobs = []
