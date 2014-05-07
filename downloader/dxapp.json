@@ -18,13 +18,32 @@
       "optional": true
     },
     {
+      "name": "threads_per_worker",
+      "class": "int",
+      "optional": true,
+      "default": 8
+    },
+    {
       "name": "smallest",
       "class": "boolean",
       "optional": true,
       "default": false
     }
   ],
-  "outputSpec": [],
+  "outputSpec": [
+    {
+      "name": "files_skipped",
+      "class": "int"
+    },
+    {
+      "name": "files_transferred",
+      "class": "int"
+    },
+    {
+      "name": "bytes_transferred",
+      "class": "int"
+    }
+  ],
   "runSpec": {
     "interpreter": "python2.7",
     "file": "src/downloader.py",
