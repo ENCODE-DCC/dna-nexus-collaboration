@@ -20,6 +20,11 @@ import csv
 import subprocess
 import threading
 
+mirror_urls = [
+    "http://encodedcc.sdsc.edu/warehouse/",
+    "http://encode-01.sdsc.edu/warehouse/"
+]
+
 class Map(dict):
     def __init__(self, **kwargs):
         super(Map, self).__init__(**kwargs)
@@ -30,7 +35,7 @@ def load_file_list():
     with gzip.open('/ENCODE-SDSC-snapshot-20140505.tsv.gz') as tsvin:
         tsvin = csv.reader(tsvin, delimiter='\t')
         tsvin.next() # skip header
-        return [Map(path=row[0], size=row[1], md5=row[2]) for row in tsvin]
+        return [Map(path=row[0], size=int(row[1]), md5=row[2]) for row in tsvin]
 
 # ensure existence of all necessary folders in the project
 def mkdirs():
@@ -53,12 +58,84 @@ def postprocess(process_outputs):
 
     return { "answer": "placeholder value" }
 
+
+def transfer_file(f):
+    dn, fn = os.path.split(f.path)
+    dn = "/" + dn
+    urls = [base + f.path for base in mirror_urls]
+
+    # download
+    subprocess.check_call(["aria2c","-x","16", "-s","64","--check-certificate=false","-o",f.md5] + urls)
+    
+    # verify integrity
+    md5 = subprocess.Popen(["md5sum",f.md5],stdout=subprocess.PIPE).communicate()[0]
+    if md5 != f.md5:
+        raise Error("expected MD5 " + f.md5 + " got " + md5)
+    
+    # upload to project
+    subprocess.check_call(["/ua","-p",dxpy.PROJECT_CONTEXT_ID,"-f",dn,"-n",fn,"-r","8",
+                           "--do-not-compress","--do-not-resume",fn])
+    
+    # tag file with md5
+    dxfiles = dxpy.search.find_data_objects(project=dxpy.PROJECT_CONTEXT_ID,classname="file",
+                                            folder=dn,name=fn,return_handler=True)
+    if len(dxfiles) != 1:
+        raise Error("could not uniquely locate file just uploaded")
+    dxfiles[0].set_properties({"md5": f.md5})
+
+    # delete scratch copy
+    os.remove(f.md5)
+
+def process_file(f):
+    print f.path, "begin"
+    dn, fn = os.path.split(f.path)
+    dn = "/" + dn
+
+    # check if a file object with this path already exists in the project
+    existing_dxfiles = dxpy.search.find_data_objects(project=dxpy.PROJECT_CONTEXT_ID,classname="file",
+                                                     folder=dn,name=fn,return_handler=True)
+
+    if len(existing_dxfiles) > 1:
+        raise Error(f.path + " found multiple existing file objects! manually remove them and try again")
+    elif len(existing_dxfiles) == 1:
+        existing_dxfile = existing_dxfiles[0]
+
+        if existing_dxfile.state == "open":
+            print f.path, " removing existing open file object"
+            existing_dxfile.remove()
+        else:
+            existing_props = existing_dxfile.get_properties()
+            if "md5" not in existing_props or existing_props["md5"] != f.md5:
+                raise Error(f.path + " MD5 mismatch with existing file object! manually remove and try again")
+            print f.path, " skip"
+            return 0
+
+    max_tries=8
+    for n in xrange(max_tries)
+        try:
+            transfer_file(f)
+            break
+        except:
+            print f.path, sys.exc_info()[0]
+            if n == max_tries-1:
+                raise
+            print f.path, " retry"
+
+    print f.path, " complete"
+    return 1
+
 @dxpy.entry_point("process")
-def process(workers, max_files_per_worker, whoami):
+def process(workers, max_files_per_worker, whoami, smallest):
+    # TODO spawn dstat
+    subprocess.check_call("gunzip /ua.gz; chmod +x /ua",shell=True)
     files = load_file_list()
 
     # sort the files by MD5
-    files.sort(key=lambda f: f.md5)
+    if not smallest:
+        files.sort(key=lambda f: f.md5)
+    else:
+        # for testing: start with the smallest files
+        files.sort(key=lambda f: f.size)
 
     # take only those for this worker
     files = [files[i] for i in xrange(len(files)) if i%workers == whoami]
@@ -67,49 +144,23 @@ def process(workers, max_files_per_worker, whoami):
     if len(files) > max_files_per_worker:
         del files[max_files_per_worker:]
 
-    # use multiprocessing.dummy.Pool to do the following
+    print "will process", len(files), "files"
 
-    # count skipped & transferred
+    # TODO use multiprocessing.dummy.Pool to do the following
+    #      count skipped & transferred
 
     for f in files:
-        print f.path, " begin"
-        dn, fn = os.path.split(f.path)
-        dn = "/" + dn
-
-        # check if a file object with this path already exists in the project
-        existing_dxfiles = dxpy.search.find_data_objects(project=dxpy.PROJECT_CONTEXT_ID,classname="file",
-                                                         folder=dn,name=fn,
-                                                         return_handler=True)
-
-        if len(existing_dxfiles) > 1:
-            raise Error(f.path + " found multiple existing file objects! manually remove them and try again")
-        elif len(existing_dxfiles) == 1:
-            existing_dxfile = existing_dxfiles[0]
-
-            if existing_dxfile.state == "open":
-                print f.path, " removing existing open file object"
-                existing_dxfile.remove()
-            else:
-                existing_props = existing_dxfile.get_properties()
-                if "md5" not in existing_props or existing_props["md5"] != f.md5:
-                    raise Error(f.path + " MD5 mismatch with existing file object! manually remove and try again")
-                print f.path, " skip"
-                continue
-
-        # aria2c
-        # md5sum. be prepared to retry download on md5 mismatch
-        # ua
-
+       process_file(f)
 
     return { "output": "placeholder value" }
 
 @dxpy.entry_point("main")
-def main(workers, max_files_per_worker=None):
+def main(workers, max_files_per_worker=None, smallest=Falso):
     mkdirs()
 
     subjobs = []
     for i in range(workers):
-        subjob_input = { "workers": workers, "max_files_per_worker": max_files_per_worker, "whoami": i }
+        subjob_input = { "workers": workers, "max_files_per_worker": max_files_per_worker, "whoami": i, "smallest": smallest }
         subjobs.append(dxpy.new_dxjob(subjob_input, "process"))
 
     # The following line creates the job that will perform the
