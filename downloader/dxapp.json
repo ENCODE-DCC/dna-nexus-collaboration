@@ -24,6 +24,12 @@
       "default": 8
     },
     {
+      "name": "worker_launch_delay_seconds",
+      "class": "int",
+      "optional": true,
+      "default": 0
+    },
+    {
       "name": "smallest",
       "class": "boolean",
       "optional": true,
