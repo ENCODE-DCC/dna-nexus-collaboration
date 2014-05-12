@@ -64,7 +64,7 @@ def transfer_file(f):
         time.sleep(60)
 
     # timeout of last resort -- kill transfer that's gone slower than 4GB/hr (~10 megabit/s)
-    last_resort_timeout = max(3600,int(3600.0*f.size/GiB))
+    last_resort_timeout = max(3600,int(900.0*f.size/GiB))
     timeout_cmd = ["timeout", str(last_resort_timeout)]
 
     # perform aria2c download
