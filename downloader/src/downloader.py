@@ -25,12 +25,23 @@ class Map(dict):
         super(Map, self).__init__(**kwargs)
         self.__dict__ = self
 
-# load Eurie's manifest tsv as [Map(filepath,size,md5),...]
+# load Eurie's manifest tsv as [Map(path,size,md5),...]
 def load_file_list():
     with gzip.open('/ENCODE-SDSC-snapshot-20140505.tsv.gz') as tsvin:
         tsvin = csv.reader(tsvin, delimiter='\t')
         tsvin.next() # skip header
         return [Map(path=row[0], size=int(row[1]), md5=row[2]) for row in tsvin]
+
+# load Jim's patches to Eurie's manifest as [{edwName: Map(badMd5,goodMd5)}]
+def load_file_list_patch():
+    ans = {}
+    with open('/diffMd5.lst') as pin:
+        pin = csv.reader(pin, delimiter=' ')
+        pin.next() # skip header
+        for row in pin:
+            ans[row[0]] = Map(path=row[0],badMd5=row[1],goodMd5=row[2])
+    print 'Loaded', len(ans), 'MD5 corrections from diffMd5.lst'
+    return ans
 
 def disk_free_space():
     s = os.statvfs('/')
@@ -103,7 +114,7 @@ def process_file(f):
     elif len(existing_dxfiles) == 1:
         existing_dxfile = existing_dxfiles[0]
         if existing_dxfile.state == "open":
-            print f.path, " removing incomplete file", existing_dxfile.get_id()
+            print f.path, "removing incomplete file", existing_dxfile.get_id()
             existing_dxfile.remove()
         else:
             existing_props = existing_dxfile.get_properties()
@@ -142,6 +153,7 @@ def process(workers, max_files_per_worker, whoami, threads_per_worker, smallest)
     try:
         subprocess.check_call("gunzip /ua.gz; chmod +x /ua",shell=True)
         files = load_file_list()
+        files_patch = load_file_list_patch()
 
         # sort the files by MD5 (effectively shuffle them, but such that the
         # order is the same across parallel workers)
@@ -153,6 +165,17 @@ def process(workers, max_files_per_worker, whoami, threads_per_worker, smallest)
 
         # take a subset for this worker
         files = [files[i] for i in xrange(len(files)) if i%workers == whoami]
+        # apply MD5 patches
+        for f in files:
+            if f.path in files_patch:
+                if f.md5 != files_patch[f.path].badMd5:
+                    raise Exception(f.path, "bad MD5 patch", f.md5, files_patch[f.path].badMd5, files_patch[f.path].goodMd5)
+                f.md5 = files_patch[f.path].goodMd5
+                print f.path, "patched MD5 from", files_patch[f.path].badMd5, "to", f.md5
+        for f in files:
+            if f.path == "2013/4/18/ENCFF001QYA.bam":
+                print "For avoidance of doubt, expected MD5 for 2013/4/18/ENCFF001QYA.bam is now", f.md5
+        # apply max_files_per_worker
         if max_files_per_worker is not None and len(files) > max_files_per_worker:
             del files[max_files_per_worker:]
 
