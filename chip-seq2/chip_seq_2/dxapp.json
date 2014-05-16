@@ -1,0 +1,45 @@
+{
+  "name": "chip_seq_2",
+  "title": "ChIP-Seq 2 ",
+  "summary": "Implements the ChIP-Seq 2 Pipeline from ENCODE",
+  "dxapi": "1.0.0",
+  "version": "0.0.1",
+  "categories": [],
+  "inputSpec": [
+    {
+      "name": "replicates",
+      "label": "Replicates",
+      "class": "array:file",
+      "optional": false,
+      "patterns": ["*.bam"]
+    },
+    {
+      "name": "controls",
+      "label": "Controls",
+      "class": "array:file",
+      "optional": false,
+      "patterns": ["*.bam"]
+    },
+    {
+      "name": "sort_filter_and_remove_dups",
+      "label": "Sort, filter, and remove duplicates from input bam files",
+      "class": "boolean",
+      "optional": true,
+      "default": false
+    },
+    {
+      "name": "duplicates_removed",
+      "label": "Duplicates have been removed from input bam files",
+      "class": "boolean",
+      "optional": true,
+      "default": false
+    }
+  ],
+  "outputSpec": [],
+  "runSpec": {
+    "interpreter": "python2.7",
+    "file": "src/chip_seq_2.py"
+  },
+  "access": {"allProjects": "VIEW"},
+  "authorizedUsers": []
+}

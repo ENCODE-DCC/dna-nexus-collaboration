@@ -29,11 +29,69 @@ def get_java_cmd():
 
     return java_cmd
 
+def calc_pcr_bottleneck_coefficient2(filename):
+    # First look at the reverse reads.
+    (prefix, suffix) = os.path.splitext(filename)
+    reverse_fn = prefix + '_reverse.bam'
+    cmd = '/sambamba view -f bam -F "reverse_strand" -o ' + reverse_fn + ' ' + filename
+    print cmd
+    subprocess.check_call(cmd, shell=True)
+    # Now, invert the position number so that position now refers to 5'
+    inverted_fn = prefix + '_reverse_inverted.bam'
+    cmd = '/invert_reverse_reads {0} {1}'.format(reverse_fn, inverted_fn)
+    print cmd
+    subprocess.check_call(cmd, shell=True)
+    # We need to sort again since we adjusted the position number
+    sorted_fn = prefix + '_reverse_inverted_sorted.bam'
+    cmd = '/sambamba sort -t {0} -o {1} {2} '.format(multiprocessing.cpu_count()-1, sorted_fn, inverted_fn)
+    print cmd
+    subprocess.check_call(cmd, shell=True)
+    # And finally we get to actually calculate the pcr bottleneck coefficient
+    cmd = '/calc_pcr_bottleneck_coefficient ' + sorted_fn
+    print cmd
+    output = subprocess.check_output(cmd, shell=True).strip()
+    print output
+    (numerator_rev, denominator_rev, ratio) = output.split('\t')
+
+    forward_fn = prefix + '_forward.bam'
+    cmd = '/sambamba view -f bam -F "not reverse_strand" -o ' + forward_fn + ' ' + filename
+    print cmd
+    subprocess.check_call(cmd, shell=True)
+    # Now calculate the PCR bottleneck coefficient for the forward
+    cmd = '/calc_pcr_bottleneck_coefficient ' + forward_fn
+    print cmd
+    output = subprocess.check_output(cmd, shell=True).strip()
+    print output
+    (numerator_fwd, denominator_fwd, ratio) = output.split('\t')
+
+    ratio = (float(numerator_rev) + float(numerator_fwd))
+    ratio /= (float(denominator_rev) + float(denominator_fwd))
+
+    return ratio
+
+def calc_pcr_bottleneck_coefficient(filename):
+    # M1: number of distinct locations with only a single read mapping to it
+    # M2: number of distinct locations with exactly 2 reads mapping to it
+    # M0: number of distinct locations to which some read maps
+    # MT: number of total reads
+    cmd = '/bamToBed -i {0} | '.format(filename)
+    cmd += 'sort -k1,1 -k2n,2n -k3n,3n -k6,6 | '
+    cmd += 'awk \'{print $1"\t"$2"\t"$3"\t"$6}\' | '
+    cmd += 'uniq -c | '
+    cmd += 'awk \'BEGIN{mt=0;m0=0;m1=0;m2=0} ($1==1){m1=m1+1} ($1==2){m2=m2+1} {m0=m0+1} {mt=mt+$1} END{printf "%d\t%d\t%d\t%d\t%f\t%f\t%f\\n",mt,m0,m1,m2,m0/mt,m1/m0,m1/m2}\''
+    print cmd
+    output = subprocess.check_output(cmd, shell=True).strip()
+    print output
+    (mt, m0, m1, m2, pcr_bottleneck2, pcr_bottleneck, m1_over_m2) = output.split('\t')
+
+    return float(pcr_bottleneck)
+
 def sort_bam(job_inputs):
     input_bam = dxpy.DXFile(job_inputs['input_bam'])
     fn = input_bam.describe()['name']
     dxpy.download_dxfile(input_bam.get_id(), fn)
 
+    # Sort and optionally remove unmapped and multimapped reads
     sorted_ofn = os.path.splitext(fn)[0] + '_sorted.bam'
     cmd = '/sambamba sort -t {0} -o /dev/stdout {1} '.format(multiprocessing.cpu_count()-1, fn)
     if job_inputs['quality_filter']:
@@ -42,6 +100,14 @@ def sort_bam(job_inputs):
     print cmd
     subprocess.check_call(cmd, shell=True)
 
+    # Count mapped, unique reads.
+    cmd = '/sambamba view -f bam -F "(mapping_quality > 1) and not unmapped" -c ' + sorted_ofn
+    print cmd
+    num_uniquely_mapped_reads = int(subprocess.check_output(cmd, shell=True).strip())
+
+    pcr_bottleneck_coefficient = calc_pcr_bottleneck_coefficient(sorted_ofn)
+
+    final_ofn = sorted_ofn
     if job_inputs['remove_duplicates']:
         deduped_ofn = os.path.splitext(sorted_ofn)[0] + '_deduped.bam'
         md_metrics_ofn = os.path.splitext(sorted_ofn)[0] + '_deduped_metrics.txt'
@@ -51,20 +117,22 @@ def sort_bam(job_inputs):
         subprocess.check_call(cmd, shell=True)
         bam_file = dxpy.dxlink(dxpy.upload_local_file(deduped_ofn).get_id())
         metrics_file = dxpy.dxlink(dxpy.upload_local_file(md_metrics_ofn).get_id())
+
+        final_ofn = deduped_ofn
     else:
         bam_file = dxpy.dxlink(dxpy.upload_local_file(sorted_ofn).get_id())
         metrics_file = None
 
-    return {'bam_file': bam_file, 'metrics_file': metrics_file}
+    return {'output_bam': bam_file,
+            'dedup_metrics_file': metrics_file,
+            'qc_uniquely_mapped_reads': num_uniquely_mapped_reads,
+            'qc_pcr_bottleneck_coefficient': pcr_bottleneck_coefficient}
 
 @dxpy.entry_point('main')
 def main(input_bam, quality_filter=True, remove_duplicates=True):
     sort_inputs = {'input_bam': input_bam, 'quality_filter': quality_filter, 'remove_duplicates': remove_duplicates}
     sort_output = sort_bam(sort_inputs)
 
-    output = {'output_bam': sort_output['bam_file'],
-              'dedup_metrics_file': sort_output['metrics_file']}
-
-    return output
+    return sort_output
 
 dxpy.run()

@@ -43,6 +43,18 @@
       "class": "file",
       "patterns": ["*.txt"],
       "optional": true
+    },
+    {
+      "name": "qc_uniquely_mapped_reads",
+      "label": "The number of uniquely mapped reads",
+      "class": "int",
+      "optional": false
+    },
+    {
+      "name": "qc_pcr_bottleneck_coefficient",
+      "label": "The PCR bottleneck coefficient defined as N1/Nd",
+      "class": "float",
+      "optional": false
     }
   ],
   "runSpec": {
