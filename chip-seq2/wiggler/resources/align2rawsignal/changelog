@@ -1,0 +1,71 @@
+############
+Release 2.0
+############
+(March 2011)
+MAJOR CHANGES
+- Changed all parameter names (shorter names easier to use)
+- Changed tag extensions to combinations of tag-shifts and smoothing
+- Various smoothing kernels implemented
+
+############
+Release 0.4.2
+############
+(Oct 2010)
+MINOR CHANGES
+- Fixed bug in --umap-dir parameter (it would fail if you added a / at the end of the directory name)
+- Improved error checking for read starts and ends in tagAlign/BAM files
+- Reduced file sizes for all types of output files by limiting precision of values to 1 digit after decimal point
+- mat output now stores signal values as type 'single' which reduces file sizes
+
+############
+Release 0.4.1
+############
+(May 2010)
+MINOR CHANGES
+- Updated BAM reading routine for better handling of copying and moving of temp files
+- Updated README with some clarification on use of --v and --ofile
+
+############
+Release 0.4
+############
+(April 2010)
+MINOR CHANGES
+- Improved error checking
+- Changed code layout (more functions)
+- Changed normalization a bit to merge data from replicates in a better way
+- Better variable naming conventions (this changes workspace variables name in 
+  .mat output format)
+MAJOR CHANGES
+- Can now read in BAM and/or tagAlign files
+- Needs a Samtools binary to be in your path
+- Can now handle encodehg19 female genome
+- Added mappability filter to nullify unreliable low mappability locations
+- Improved normalization to better handle excessive amplification of signal in 
+  low mappability regions
+
+############
+Release 0.3
+############
+(Dec 2009)
+MINOR CHANGES
+- None
+MAJOR CHANGES
+- Added support for negative tag extension (centered window averaging)
+- Added 2 more (total 5) types of normalization (fold enrichment to null poisson)
+
+############
+Release 0.2
+(Nov 2009)
+############
+MINOR CHANGES
+-None
+MAJOR CHANGES
+- Added support for .mat file output
+    - Merge getmaxtags with signal into .mat file
+- Added 3 types of ERPKM normalization
+
+############
+Release 0.1
+(Aug 2009)
+############
+First Release

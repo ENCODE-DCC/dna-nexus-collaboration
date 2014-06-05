@@ -133,6 +133,22 @@ def create_final_set_of_peak_calls(job_inputs):
             'num_peaks_each_pseudo_rep': num_peaks_each_pseudo_rep,
             'num_peaks_pooled_pseudo_rep': numPeaks_Rep0}
 
+def generate_idr_consistency_plots(replicate_idr_output):
+    replicate_idr_prefixes = [r.replace('.tar.gz', '') for r in replicate_idr_output]
+    output_prefix = os.path.commonprefix(replicate_idr_prefixes) + '_AllReps'
+    cmd = 'Rscript /opt/idrCode/batch-consistency-plot.r {0} {1} {2}'
+    cmd = cmd.format(len(replicate_idr_prefixes), output_prefix, ' '.join(replicate_idr_prefixes))
+    print cmd
+    subprocess.check_call(cmd, shell=True)
+
+    cmd = 'tar zcvf {0}.tar.gz *-plot.ps'.format(output_prefix)
+    print cmd
+    subprocess.check_call(cmd, shell=True)
+
+    output_file = dxpy.upload_local_file(output_prefix + '.tar.gz')
+
+    return dxpy.dxlink(output_file)
+
 @dxpy.entry_point('main')
 def main(**job_inputs):
     pool = multiprocessing.Pool()
@@ -192,6 +208,9 @@ def main(**job_inputs):
               'num_peaks_each_rep': create_final_set_of_peak_calls_output['num_peaks_each_rep'],
               'num_peaks_each_pseudo_rep': create_final_set_of_peak_calls_output['num_peaks_each_pseudo_rep'],
               'num_peaks_pooled_pseudo_rep': create_final_set_of_peak_calls_output['num_peaks_pooled_pseudo_rep']}
+
+    if job_inputs['generate_idr_consistency_plots']:
+        output['idr_consistency_plots'] = generate_idr_consistency_plots(replicate_idr_output)
 
     return output
 

@@ -73,6 +73,13 @@
       "class": "string",
       "optional": false,
       "choices": ["genome_table.human.hg18.txt", "genome_table.human.hg19.txt", "genome_table.mm9.txt", "genome_table.worm.ws220.txt"]
+    },
+    {
+      "name": "generate_idr_consistency_plots",
+      "label": "Generate IDR Consistency Plots",
+      "class": "boolean",
+      "optional": true,
+      "default": false
     }
   ],
   "outputSpec": [
@@ -97,6 +104,12 @@
     {
       "name": "num_peaks_pooled_pseudo_rep",
       "class": "int"
+    },
+    {
+      "name": "idr_consistency_plots",
+      "class": "file",
+      "optional": true,
+      "patterns": ["*.tar.gz"]
     }
   ],
   "runSpec": {

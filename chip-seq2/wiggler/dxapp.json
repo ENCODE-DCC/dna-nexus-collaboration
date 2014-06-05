@@ -1,0 +1,72 @@
+{
+  "name": "wiggler",
+  "title": "WIGGLER",
+  "summary": "wiggler",
+  "dxapi": "1.0.0",
+  "version": "0.0.1",
+  "categories": [],
+  "inputSpec": [
+    {
+      "name": "input_bams",
+      "label": "Input bam files",
+      "class": "array:file",
+      "optional": false,
+      "patterns": ["*.bam"]
+    },
+    {
+      "name": "chr_fastas",
+      "label": "tar.gz file containing fastas for each chromosome",
+      "class": "file",
+      "optional": false,
+      "patterns": ["*.tar.gz"]
+    },
+    {
+      "name": "mappability_files",
+      "label": "tar.gz file containing mappability files",
+      "class": "file",
+      "optional": false,
+      "patterns": ["*.tar.gz"]
+    },
+    {
+      "name": "output_format",
+      "label": "Output format",
+      "class": "string",
+      "optional": true,
+      "choices": ["bg", "wig", "mat"],
+      "default": "wig"
+    },
+    {
+      "name": "smoothing_window",
+      "label": "Size of smoothing window",
+      "class": "float",
+      "optional": true
+    },
+    {
+      "name": "smoothing_kernel",
+      "label": "Smoothing kernel to use",
+      "class": "string",
+      "optional": true,
+      "choices": ["rectangular", "triangular", "epanechnikov", "biweight", "triweight", "cosine", "gaussian", "tukey"]
+    },
+    {
+      "name": "frag_len",
+      "label": "Fragment-length",
+      "class": "array:int",
+      "optional": true
+    }
+  ],
+  "outputSpec": [
+    {
+      "name": "output_file",
+      "label": "Output file",
+      "class": "file"
+    }
+  ],
+  "runSpec": {
+    "execDepends": [ {"name": "libxp6"},
+                     {"name": "gawk"}],
+    "interpreter": "python2.7",
+    "file": "src/wiggler.py"
+  },
+  "authorizedUsers": []
+}
