@@ -1,0 +1,116 @@
+{
+  "name": "hotspot_spot",
+  "title": "Hotspot/Spot QC",
+  "summary": "hotspot_spot",
+  "dxapi": "1.0.0",
+  "version": "0.0.1",
+  "categories": [],
+  "inputSpec": [
+    {
+      "name": "bam_file",
+      "label": "Input BAM file",
+      "class": "file",
+      "optional": false,
+      "patterns": ["*.bam"]
+    },
+    {
+      "name": "background_bam_file",
+      "label": "Background BAM file",
+      "class": "file",
+      "optional": true,
+      "patterns": ["*.bam"]
+    },
+    {
+      "name": "mappability_file",
+      "label": "Mappability File",
+      "class": "file",
+      "optional": false,
+      "patterns": ["*.bed", "*.bed.starch"]
+    },
+    {
+      "name": "chromosome_info",
+      "label": "Chromosome Info Bed File",
+      "class": "file",
+      "optional": false,
+      "patterns": ["*.bed"]
+    },
+    {
+      "name": "omit_regions",
+      "label": "Regions from which tags should be automatically omitted",
+      "class": "file",
+      "optional": true,
+      "patterns": ["*.bed"]
+    },
+    {
+      "name": "tag_length",
+      "label": "Tag Length",
+      "class": "int",
+      "optional": true,
+      "default": 36
+    },
+    {
+      "name": "run_spot_only",
+      "label": "Calculate Spot Score Only",
+      "class": "boolean",
+      "optional": true,
+      "default": true
+    }
+  ],
+  "outputSpec": [
+    {
+      "name": "hotspot_output",
+      "label": "Hotspot Output Directory",
+      "class": "file",
+      "patterns": ["*.tar.gz"],
+      "optional": true
+    },
+    {
+      "name": "min_threshold_hotspots",
+      "label": "Minimally thresholded hotspots file",
+      "class": "file",
+      "optional": true
+    },
+    {
+      "name": "fdr_threshold_hotspots",
+      "label": "FDR thresholded hotspots file",
+      "class": "file",
+      "optional": true
+    },
+    {
+      "name": "fdr_threshold_peaks",
+      "label": "FDR thresholded peaks file",
+      "class": "file",
+      "optional": true
+    },
+    {
+      "name": "fdr_threshold_smoothed_density_peaks",
+      "label": "FDR thresholded smoothed density at peaks file",
+      "class": "file",
+      "optional": true
+    },
+    {
+      "name": "z_scores",
+      "label": "Z-scores for each hotspot containing peak",
+      "class": "file",
+      "optional": true
+    },
+    {
+      "name": "p_values",
+      "label": "Binomial p-values for each hotspot containing peak",
+      "class": "file",
+      "optional": true
+    },
+    {
+      "name": "spot_score",
+      "label": "SPOT score in spot.out file",
+      "class": "float",
+      "optional": true
+    }
+  ],
+  "runSpec": {
+    "execDepends": [ {"name": "libgsl0ldbl"}],
+    "interpreter": "python2.7",
+    "file": "src/hotspot_spot.py"
+  },
+  "authorizedUsers": []
+}
