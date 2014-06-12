@@ -57,7 +57,7 @@ main() {
     # class.  Run "dx-jobutil-add-output -h" for more information on what it
     # does.
 
-    Rscript run_spp.R -c="$input_name" -p=`nproc` -i="$control_name" -npeak=300000 -savr -savp -savd -rf
+    Rscript run_spp.R -c="$input_name" -p=`nproc` -i="$control_name" -npeak=300000 -savr -savp -savd -out=${input_name%.bam}.outFile.txt -rf
     
     ls
     
@@ -72,4 +72,6 @@ main() {
     dx-jobutil-add-output rdata "$file_id"
     file_id=`dx upload "$peaks" --brief`
     dx-jobutil-add-output peaks "$file_id"
+    file_id=`dx upload "${input_name%.bam}.outFile.txt" --brief`
+    dx-jobutil-add-output outfile "$file_id"
 }

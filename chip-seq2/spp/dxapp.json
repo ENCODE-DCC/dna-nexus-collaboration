@@ -34,6 +34,10 @@
       "name": "peaks",
       "class": "file",
       "patterns": ["*.regionPeak.gz"]
+    },
+    {
+      "name": "outfile",
+      "class": "file"
     }
   ],
   "runSpec": {
