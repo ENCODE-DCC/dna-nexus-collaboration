@@ -1,0 +1,50 @@
+#! /usr/bin/env bash
+set -e -o pipefail
+
+scriptTokBin=/hotspot-distr-v4/ScriptTokenizer/src/script-tokenizer.py
+pipeDir=/hotspot-distr-v4/pipeline-scripts
+tokenFile=/hotspot-distr-v4/runall.tokens.txt
+
+## Download test data if necessary
+#data=test_DNase_seq.hg19.bam
+#url=http://www.uwencode.org/proj/hotspot/$data
+#if [ ! -s $data ]; then
+#    echo "downloading test data..."
+#    wget $url
+#fi
+
+## Do SPOT only (set _FDRS_ to "N" in runall.tokens.txt)
+{RUN_SPOT_ONLY} scripts="$pipeDir/run_make_lib
+{RUN_SPOT_ONLY}     $pipeDir/run_10kb_counts
+{RUN_SPOT_ONLY}     $pipeDir/run_pass1_hotspot
+{RUN_SPOT_ONLY}     $pipeDir/run_pass1_merge_and_thresh_hotspots
+{RUN_SPOT_ONLY}     $pipeDir/run_pass2_hotspot
+{RUN_SPOT_ONLY}     $pipeDir/run_rescore_hotspot_passes
+{RUN_SPOT_ONLY}     $pipeDir/run_spot"
+
+## Do everything, including badspots and final cleanup
+{RUN_EVERYTHING} scripts="$pipeDir/run_badspot
+{RUN_EVERYTHING}    $pipeDir/run_make_lib
+{RUN_EVERYTHING}    $pipeDir/run_wavelet_peak_finding
+{RUN_EVERYTHING}    $pipeDir/run_10kb_counts
+{RUN_EVERYTHING}    $pipeDir/run_generate_random_lib
+{RUN_EVERYTHING}    $pipeDir/run_pass1_hotspot
+{RUN_EVERYTHING}    $pipeDir/run_pass1_merge_and_thresh_hotspots
+{RUN_EVERYTHING}    $pipeDir/run_pass2_hotspot
+{RUN_EVERYTHING}    $pipeDir/run_rescore_hotspot_passes
+{RUN_EVERYTHING}    $pipeDir/run_spot
+{RUN_EVERYTHING}    $pipeDir/run_thresh_hot.R
+{RUN_EVERYTHING}    $pipeDir/run_both-passes_merge_and_thresh_hotspots
+{RUN_EVERYTHING}    $pipeDir/run_add_peaks_per_hotspot
+{RUN_EVERYTHING}    $pipeDir/run_final"
+
+$scriptTokBin \
+    --clobber \
+    --output-dir=`pwd` \
+    $tokenFile \
+    $scripts
+
+for script in $scripts
+do
+    ./$(basename $script).tok
+done
