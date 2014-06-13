@@ -66,7 +66,8 @@
     "execDepends": [ {"name": "libxp6"},
                      {"name": "gawk"}],
     "interpreter": "python2.7",
-    "file": "src/wiggler.py"
+    "file": "src/wiggler.py",
+    "bundledDepends": [ {"name": "MCR2010b.bin", "id": {"$dnanexus_link": "file-BKJY2Yj0Q4b3ypkBxQXQ01k8"}}]
   },
   "authorizedUsers": []
 }
