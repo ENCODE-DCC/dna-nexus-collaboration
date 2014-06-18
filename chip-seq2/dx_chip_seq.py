@@ -19,6 +19,9 @@ CHROMOSOME_FASTAS = 'ucsc.hg19.chromosomes.minimal.tar.gz'
 MAPPABILITY_FILES = {'f': 'female_globalmap_k20tok54.tar.gz',
                      'm':   'male_globalmap_k20tok54.tar.gz'}
 
+REFERENCE_FILES = {}
+APPLETS = {}
+
 def get_args():
     '''Parse the input arguments.'''
     ap = argparse.ArgumentParser(description='Generate DNAnexus workflow for the ENCODE chip_seq pipeline.')
@@ -57,23 +60,31 @@ def get_args():
 
 def find_reference_file_by_name(reference_name, applets_project_id):
     '''Looks up a reference file by name in the project that holds common tools. From Joe Dale's code.'''
+    cached = '*'
+    if (reference_name, applets_project_id) not in REFERENCE_FILES:
+        found = dxpy.find_one_data_object(classname="file", name=reference_name,
+                                          project=applets_project_id,
+                                          folder='/Reference Data',
+                                          recurse=True,
+                                          zero_ok=False, more_ok=False, return_handler=True)
+        REFERENCE_FILES[(reference_name, applets_project_id)] = found
+        cached = ''
 
-    found = dxpy.find_one_data_object(classname="file", name=reference_name,
-                                      project=applets_project_id,
-                                      folder='/Reference Data',
-                                      recurse=True,
-                                      zero_ok=False, more_ok=False, return_handler=True)
-    print "Resolved %s to %s" % (reference_name, found.get_id())
-    return dxpy.dxlink(found)
+    print cached + "Resolved %s to %s" % (reference_name, REFERENCE_FILES[(reference_name, applets_project_id)].get_id())
+    return dxpy.dxlink(REFERENCE_FILES[(reference_name, applets_project_id)])
 
 def find_applet_by_name(applet_name, applets_project_id):
     '''Looks up an applet by name in the project that holds tools.  From Joe Dale's code.'''
+    cached = '*'
+    if (applet_name, applets_project_id) not in APPLETS:
+        found = dxpy.find_one_data_object(classname="applet", name=applet_name,
+                                          project=applets_project_id,
+                                          zero_ok=False, more_ok=False, return_handler=True)
+        APPLETS[(applet_name, applets_project_id)] = found
+        cached = ''
 
-    found = dxpy.find_one_data_object(classname="applet", name=applet_name,
-                                      project=applets_project_id,
-                                      zero_ok=False, more_ok=False, return_handler=True)
-    print "Resolved %s to %s" % (applet_name, found.get_id())
-    return found
+    print cached + "Resolved %s to %s" % (applet_name, APPLETS[(applet_name, applets_project_id)].get_id())
+    return APPLETS[(applet_name, applets_project_id)]
 
 def get_project(project_name):
     project = dxpy.find_projects(name=project_name, name_mode='glob', return_handler=True)
