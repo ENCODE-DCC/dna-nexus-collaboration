@@ -69,9 +69,15 @@ def idr_batch_consistency_analysis(job_inputs):
     print cmd
     subprocess.check_call(cmd)
 
-    cmd = 'tar zcvf {0}.tar.gz {0}-em.sav {0}-uri.sav {0}-Rout.txt {0}-npeaks-aboveIDR.txt {0}-overlapped-peaks.txt'.format(job_inputs['output_prefix'])
+    cmd = ['tar', 'zcvf',
+           '{0}.tar.gz'.format(job_inputs['output_prefix']),
+           '{0}-em.sav'.format(job_inputs['output_prefix']),
+           '{0}-uri.sav'.format(job_inputs['output_prefix']),
+           '{0}-Rout.txt'.format(job_inputs['output_prefix']),
+           '{0}-npeaks-aboveIDR.txt'.format(job_inputs['output_prefix']),
+           '{0}-overlapped-peaks.txt'.format(job_inputs['output_prefix'])]
     print cmd
-    subprocess.check_call(cmd, shell=True)
+    subprocess.check_call(cmd)
 
     return '{0}.tar.gz'.format(job_inputs['output_prefix'])
 
@@ -115,12 +121,12 @@ def create_final_set_of_peak_calls(job_inputs):
 
     pooled_replicates_peaks_fn = download_and_gunzip_file(job_inputs['pooled_replicate_peaks_file'])
     coi = {'signal.value': 7, 'p.value': 8, 'q.value': 9}[job_inputs['ranking_measure']]
-    cmd = 'sort -k{0}nr,{0}nr {1} | head -n {2} | gzip -c > {3}_conservative.regionPeak.gz'.format(coi, pooled_replicates_peaks_fn, max_numPeaks_Rep, job_inputs['output_prefix'])
+    cmd = 'sort -k{0}nr,{0}nr {1} | head -n {2} | gzip -c > "{3}_conservative.regionPeak.gz"'.format(coi, pooled_replicates_peaks_fn, max_numPeaks_Rep, job_inputs['output_prefix'])
     print cmd
     subprocess.check_output(cmd, shell=True)
 
     opt_thresh = max(max_numPeaks_Rep, numPeaks_Rep0)
-    cmd = 'sort -k{0}nr,{0}nr {1} | head -n {2} | gzip -c > {3}_optimal.regionPeak.gz'.format(coi, pooled_replicates_peaks_fn, opt_thresh, job_inputs['output_prefix'])
+    cmd = 'sort -k{0}nr,{0}nr {1} | head -n {2} | gzip -c > "{3}_optimal.regionPeak.gz"'.format(coi, pooled_replicates_peaks_fn, opt_thresh, job_inputs['output_prefix'])
     print cmd
     subprocess.check_output(cmd, shell=True)
 
