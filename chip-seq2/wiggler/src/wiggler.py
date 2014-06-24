@@ -119,6 +119,10 @@ def main(**job_inputs):
     mappability_directory = downloaded_files[-1]
     ofn = os.path.commonprefix(input_bams) + '.' + job_inputs['output_format']
 
+    if mappability_directory.find('female') >= 0:
+        cmd = 'rm {0}/chrY*'.format(chr_directory)
+        check_call_debug(cmd)
+
     # Save 10% of the memory for overhead.
     mem = get_memory('G') * 0.9
 
