@@ -30,7 +30,7 @@ def download_and_gunzip_file(input_file, skip_decompress=False):
     elif (os.path.splitext(input_filename)[-1] == '.gz') and not skip_decompress:
         cmd += '- | gunzip > '
         ofn = os.path.splitext(ofn)[0]
-    cmd += ofn
+    cmd += '"' + ofn + '"'
     print cmd
     subprocess.check_call(cmd, shell=True)
 
@@ -82,7 +82,7 @@ def idr_batch_consistency_analysis(job_inputs):
     return '{0}.tar.gz'.format(job_inputs['output_prefix'])
 
 def get_peak_counts(fn, threshold):
-    cmd = "awk '$11 <= " + str(threshold) + " {print $0}' " + fn + " | wc -l "
+    cmd = "awk '$11 <= " + str(threshold) + " {print $0}' " + '"' + fn + '"' + " | wc -l "
     print cmd
     peak_counts = subprocess.check_output(cmd, shell=True)
 
@@ -121,12 +121,12 @@ def create_final_set_of_peak_calls(job_inputs):
 
     pooled_replicates_peaks_fn = download_and_gunzip_file(job_inputs['pooled_replicate_peaks_file'])
     coi = {'signal.value': 7, 'p.value': 8, 'q.value': 9}[job_inputs['ranking_measure']]
-    cmd = 'sort -k{0}nr,{0}nr {1} | head -n {2} | gzip -c > "{3}_conservative.regionPeak.gz"'.format(coi, pooled_replicates_peaks_fn, max_numPeaks_Rep, job_inputs['output_prefix'])
+    cmd = 'sort -k{0}nr,{0}nr "{1}" | head -n {2} | gzip -c > "{3}_conservative.regionPeak.gz"'.format(coi, pooled_replicates_peaks_fn, max_numPeaks_Rep, job_inputs['output_prefix'])
     print cmd
     subprocess.check_output(cmd, shell=True)
 
     opt_thresh = max(max_numPeaks_Rep, numPeaks_Rep0)
-    cmd = 'sort -k{0}nr,{0}nr {1} | head -n {2} | gzip -c > "{3}_optimal.regionPeak.gz"'.format(coi, pooled_replicates_peaks_fn, opt_thresh, job_inputs['output_prefix'])
+    cmd = 'sort -k{0}nr,{0}nr "{1}" | head -n {2} | gzip -c > "{3}_optimal.regionPeak.gz"'.format(coi, pooled_replicates_peaks_fn, opt_thresh, job_inputs['output_prefix'])
     print cmd
     subprocess.check_output(cmd, shell=True)
 
@@ -142,12 +142,12 @@ def create_final_set_of_peak_calls(job_inputs):
 def generate_idr_consistency_plots(replicate_idr_output):
     replicate_idr_prefixes = [r.replace('.tar.gz', '') for r in replicate_idr_output]
     output_prefix = os.path.commonprefix(replicate_idr_prefixes) + '_AllReps'
-    cmd = 'Rscript /opt/idrCode/batch-consistency-plot.r {0} {1} {2}'
-    cmd = cmd.format(len(replicate_idr_prefixes), output_prefix, ' '.join(replicate_idr_prefixes))
+    cmd = 'Rscript /opt/idrCode/batch-consistency-plot.r {0} "{1}" {2}'
+    cmd = cmd.format(len(replicate_idr_prefixes), output_prefix, map(lambda x: '"' + x + '"', ' '.join(replicate_idr_prefixes)))
     print cmd
     subprocess.check_call(cmd, shell=True)
 
-    cmd = 'tar zcvf {0}.tar.gz *-plot.ps'.format(output_prefix)
+    cmd = 'tar zcvf "{0}.tar.gz" *-plot.ps'.format(output_prefix)
     print cmd
     subprocess.check_call(cmd, shell=True)
 
