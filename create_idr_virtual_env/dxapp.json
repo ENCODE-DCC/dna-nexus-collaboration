@@ -1,0 +1,28 @@
+{
+  "name": "create_idr_virtual_env",
+  "title": "Create virtual environment for IDR",
+  "summary": "create_idr_virtual_env",
+  "dxapi": "1.0.0",
+  "version": "0.0.1",
+  "categories": [],
+  "inputSpec": [],
+  "outputSpec": [
+    {
+      "name": "virtual_env",
+      "label": "Virtual environment",
+      "class": "file",
+      "patterns": ["*.tar.gz"]
+    }
+  ],
+  "runSpec": {
+    "interpreter": "bash",
+    "file": "src/create_idr_virtual_env.sh",
+    "systemRequirements": {"*": {"instanceType": "mem1_ssd1_x4"}}
+  },
+  "access": {
+    "network": [
+      "*"
+    ]
+  },
+  "authorizedUsers": []
+}
